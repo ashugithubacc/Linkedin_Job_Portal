@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <!-- Add Axios library -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- Careerjet search box -->
+    <style>
+        /* CSS styles for the search box */
+        /* ... */
+        
+        /* CSS styles for input fields and output table */
+        .input-container {
+            margin-bottom: 10px;
+        }
+        
+        .input-container input[type="text"] {
+            padding: 8px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .input-container button {
+            padding: 8px 12px;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .output-container {
+            margin-top: 20px;
+        }
+        
+        .output-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .output-container th,
+        .output-container td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .output-container th {
+            background-color: #f2f2f2;
+        }
+        
+        .pagination-container {
+            margin-top: 10px;
+        }
+        
+        .pagination-container .pagination-button {
+            margin: 0 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .pagination-container .pagination-button:hover {
+            background-color: #45a049;
+        }
+    </style>    
+</head>
+<body>
+    <center>
+        <a name="cjsearchboxanchor"></a>
+        <div class="cjsearchbox">
+            <!-- Your search box code -->
+            <div class="input-container">
+                <input type="text" id="searchTermsInput" placeholder="Search terms">
+                <input type="text" id="locationInput" placeholder="Location">
+                <button onclick="makeRequest()">Search</button>
+            </div>
+        </div>
+    </center>
+
+    <!-- Add your JavaScript code -->
+    <script>
+        // JavaScript code for making API request
+        // Replace the API key and other details with your own
+        
+        // Define global variables
+        let responseData = []; // Store the API response data
+        let currentPage = 1; // Current page number
+        const resultsPerPage = 10; // Number of results per page
+        
+        // Define the API request options
+        function getSearchTerms() {
+            return document.getElementById('searchTermsInput').value;
+        }
+        
+        function getLocation() {
+            return document.getElementById('locationInput').value;
+        }
+        
+        function getRequestOptions() {
+            const searchTerms = getSearchTerms();
+            const location = getLocation();
+            
+            const options = {
+                method: 'POST',
+                url: 'https://linkedin-jobs-search.p.rapidapi.com/',
+                headers: {
+                    'content-type': 'application/json',
+                    'X-RapidAPI-Key': '1991de7cdbmsh0cf2035b4f47ea3p199942jsn1a1a0d1a9b06',
+                    'X-RapidAPI-Host': 'linkedin-jobs-search.p.rapidapi.com'
+                },
+                data: {
+                    search_terms: searchTerms,
+                    location: location,
+                    
+                }
+            };
+            
+            return options;
+        }
+
+        // Function to make the API request
+        async function makeRequest() {
+            try {
+                const options = getRequestOptions();
+                const response = await axios.request(options);
+                console.log(response.data);
+                responseData = response.data;
+                renderTable();
+                renderPagination();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        // Function to render the table
+        function renderTable() {
+            // Clear existing table
+            const tableContainer = document.querySelector('.output-container');
+            if (tableContainer) {
+                tableContainer.parentNode.removeChild(tableContainer);
+            }
+            
+            // Create new table
+            const newTableContainer = document.createElement('div');
+            newTableContainer.classList.add('output-container');
+            const table = document.createElement('table');
+            const tableHeader = document.createElement('thead');
+            const tableBody = document.createElement('tbody');
+            
+            // Create table header row
+            const headerRow = document.createElement('tr');
+            const headers = Object.keys(responseData[0]);
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            tableHeader.appendChild(headerRow);
+            
+            // Calculate the start and end index of results to display based on the current page
+            const startIndex = (currentPage - 1) * resultsPerPage;
+            const endIndex = startIndex + resultsPerPage;
+            
+            // Create table body rows
+            for (let i = startIndex; i < endIndex; i++) {
+                if (i >= responseData.length) {
+                    break; // Break the loop if there are no more results to display
+                }
+                
+                const rowData = responseData[i];
+                const row = document.createElement('tr');
+                headers.forEach(header => {
+                    const cell = document.createElement('td');
+                    cell.textContent = rowData[header];
+                    row.appendChild(cell);
+                });
+                tableBody.appendChild(row);
+            }
+            
+            table.appendChild(tableHeader);
+            table.appendChild(tableBody);
+            newTableContainer.appendChild(table);
+            document.body.appendChild(newTableContainer);
+        }
+        
+        // Function to render the pagination controls
+        function renderPagination() {
+            // Clear existing pagination controls
+            const paginationContainer = document.querySelector('.pagination-container');
+            if (paginationContainer) {
+                paginationContainer.parentNode.removeChild(paginationContainer);
+            }
+            
+            const totalPages = Math.ceil(responseData.length / resultsPerPage);
+            
+            if (totalPages <= 1) {
+                return; // No need to render pagination if there's only one page
+            }
+            
+            const newPaginationContainer = document.createElement('div');
+            newPaginationContainer.classList.add('pagination-container');
+            
+            // Create previous button
+            const previousButton = createPaginationButton('Previous', currentPage > 1, () => {
+                currentPage--;
+                renderTable();
+                renderPagination();
+            });
+            newPaginationContainer.appendChild(previousButton);
+            
+            // Create page buttons
+            for (let i = 1; i <= totalPages; i++) {
+                const pageButton = createPaginationButton(i, currentPage !== i, () => {
+                    currentPage = i;
+                    renderTable();
+                    renderPagination();
+                });
+                newPaginationContainer.appendChild(pageButton);
+            }
+            
+            // Create next button
+            const nextButton = createPaginationButton('Next', currentPage < totalPages, () => {
+                currentPage++;
+                renderTable();
+                renderPagination();
+            });
+            newPaginationContainer.appendChild(nextButton);
+            
+            document.body.appendChild(newPaginationContainer);
+        }
+        
+        // Helper function to create pagination button
+        function createPaginationButton(text, enabled, onClick) {
+            const button = document.createElement('button');
+            button.classList.add('pagination-button');
+            button.textContent = text;
+            button.disabled = !enabled;
+            button.addEventListener('click', onClick);
+            return button;
+        }
+    </script>
+</body>
+</html>
